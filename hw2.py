@@ -70,3 +70,39 @@ plt.xlabel('RA Pixels')
 plt.ylabel('DEC Pixels')
 plt.savefig('moment2_map.png')
 plt.show()
+vbluemin = -150.0   #km/s relative to system
+vbluemax = -100.0
+#to get the sytemic velocity
+m0_roi = m0[220:360, 220:360] #region of interest
+m1_roi = m1[220:360, 220:360]
+hi = np.nanpercentile(m0_roi, 75) #high threshold for systemic velocity
+mask_hi = m0_roi > hi #mask high S/N pixels
+v_sys = np.nanmedian(m1_roi[mask_hi]) if np.any(mask_hi) else np.nanmedian(m1_roi)
+v_rel = vel - v_sys #velocity relative to systemic
+chan_blue = (v_rel >= vbluemin) & (v_rel <= vbluemax) #array for blue channels
+if np.any(chan_blue): #check if there are any blue channels
+    m0_blue_full = np.sum(fc[chan_blue, :, :], axis=0) * vw   
+else:
+    m0_blue_full = np.full_like(m0, np.nan)
+decA, decB = 250, 270   # region where the higest blue signal from m1 map
+mask_box = np.zeros_like(m0_blue_full, dtype=bool) #mask for the box
+mask_box[decA:decB, raA:raB] = True #setting the box to True
+m0_blue_box = np.where(mask_box, m0_blue_full, np.nan) #blue wing in the box only
+plt.figure()
+bgmin = np.nanpercentile(m0[220:360, 220:360], 5) #min/max
+bgmax = np.nanpercentile(m0[220:360, 220:360], 99) 
+plt.imshow(m0, origin='lower', cmap='inferno', vmin=bgmin, vmax=bgmax)
+vals = m0_blue_box[np.isfinite(m0_blue_box)] #values in the box
+if vals.size: #check if there are any finite values
+    levels = np.percentile(vals, [60, 75, 90]) #contour levels
+    plt.contour(m0_blue_box, levels=levels, colors='cyan', linewidths=1.6) 
+else:
+    print("No finite blue-wing signal in the specified box.")
+plt.colorbar(label='Jy/beam * km/s')
+plt.title("Countor map of blue wing over Moment 0 Map")
+plt.xlim([220,360])
+plt.ylim([220,360])
+plt.xlabel('RA Pixels'); plt.ylabel('DEC Pixels')
+#plt.tight_layout()
+plt.savefig('blue_box_on_m02.png')
+plt.show()
