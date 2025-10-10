@@ -1,2 +1,0 @@
-# galaxies
-galaxies class
